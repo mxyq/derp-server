@@ -36,6 +36,6 @@ ENV HOSTNAME=""
 EXPOSE 8080/tcp 3478/udp
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8080/derp/probe || exit 1
+  CMD wget -qO- http://localhost:8080/derp/probe || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
