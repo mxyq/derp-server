@@ -1,0 +1,77 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - ".gitignore"
+  # 每周一凌晨 2 点定时构建，保持 derper 版本最新（因为用的是 @main）
+  schedule:
+    - cron: "0 2 * * 1"
+  # 支持手动触发
+  workflow_dispatch:
+
+env:
+  # 替换为你的 Docker Hub 用户名/镜像名
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/derp-server
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 设置 QEMU（多平台交叉编译所需）
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 3. 设置 Docker Buildx（多平台构建引擎）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. 登录 Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 5. 提取元数据（自动生成 tag 和 label）
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # push 到 main 分支时打 latest tag
+            type=raw,value=latest,enable={{is_default_branch}}
+            # 同时打上构建日期 tag，方便回溯（格式：YYYYMMDD）
+            type=raw,value={{date 'YYYYMMDD'}}
+            # 如果有 git tag（如 v1.0.0）则额外打版本 tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      # 6. 构建并推送镜像（支持 amd64 + arm64 双平台）
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 使用 GitHub Actions 缓存层，加速后续构建
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 7. 输出镜像摘要，便于审计
+      - name: Image digest
+        run: echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
