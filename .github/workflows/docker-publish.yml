@@ -61,6 +61,7 @@ jobs:
 
       # 6. 构建并推送镜像（支持 amd64 + arm64 双平台）
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -74,4 +75,5 @@ jobs:
 
       # 7. 输出镜像摘要，便于审计
       - name: Image digest
-        run: echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
+        run: |
+          echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
