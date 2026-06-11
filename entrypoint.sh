@@ -23,6 +23,7 @@ log "Generating a secure, random NodePrivate key..."
 HEX_KEY=$(head -c 32 /dev/urandom | od -An -vtx1 | tr -d ' \n')
 # 2. 拼接新版 derper 要求的 "privkey:" 前缀
 RANDOM_KEY="privkey:${HEX_KEY}"
+log "Generated NodePrivate key: ${RANDOM_KEY}"
 
 log "Generating DERP config file at ${CONF_PATH}..."
 
@@ -38,6 +39,7 @@ cat << EOF > "$CONF_PATH"
 EOF
 
 log "DERP config file generated successfully"
+log "DERP config content:\n$(cat "$CONF_PATH")"
 log "Starting DERP server with config file..."
 
 # 使用 exec 替换当前进程，传入生成的配置文件路径
