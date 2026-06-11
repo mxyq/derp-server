@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   derp-server:
-    image: mxyq/derp-server:latest
+    image: v5zd/derp-server:latest
     container_name: derp-server
     restart: unless-stopped
     networks:
