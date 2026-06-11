@@ -1,0 +1,68 @@
+#  1545  caddy add-package github.com/caddy-dns/cloudflare
+#  1553  caddy add-package github.com/ueffel/caddy-brotli
+#  1554  caddy add-package github.com/mholt/caddy-ratelimit
+
+https://derp.xxxx.xxx {
+
+        log {
+            output file /var/log/caddy/access.log {
+                roll_size 10mb    # 文件达到 10MB 时自动轮转
+                roll_keep 5       # 保留最近 5 个日志文件
+            }
+            # level DEBUG
+            format json           # 生产环境推荐 JSON，调试最详细
+        }
+
+        tls {
+		dns cloudflare ${Token}
+                protocols tls1.2 tls1.3
+                alpn h2 http/1.1
+        }
+
+        encode zstd br gzip {
+                minimum_length 1000 # 最小压缩大小
+                match {
+                        header Content-Type text/*
+                        header Content-Type application/json*
+                        header Content-Type application/javascript*
+                }
+        }
+
+        reverse_proxy 127.0.0.1:8080 {
+                # 连接池与超时控制
+                transport http {
+                        dial_timeout 2s
+                        keepalive 30s
+                        keepalive_idle_conns 100
+                        max_conns_per_host 100
+                }
+                # 流量优化中间件
+                header_up Host {host}
+                header_up X-Real-IP {remote_host}
+		        header_up X-Forwarded-For {remote_host}
+		        header_up X-Forwarded-Proto {scheme}
+
+                # 响应优化
+                flush_interval 100ms # 减少缓冲延迟
+        }
+
+        header -Server
+
+        @static {
+                path *.css *.js *.jpg *.png *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot
+        }
+        @html {
+                path *.html
+        }
+
+        header @static Cache-Control "public, max-age=31536000, immutable"
+        header @html Cache-Control "public, max-age=31536000"
+
+        rate_limit {
+                zone dynamic {
+                        key {remote_host}
+                        events 1000
+                        window 60s
+                }
+        }
+}

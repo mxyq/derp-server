@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  derp:
+    build: .
+    container_name: derp-server
+    restart: unless-stopped
+    networks:
+      - derp-net
+
+    # 端口映射：内部已改为非特权端口 8080，外部保持原样
+    ports:
+      - "127.0.0.1:8080:8080/tcp"
+      - "13478:3478/udp"
+
+    environment:
+      - HOSTNAME=""
+      - TZ=Asia/Shanghai  # 替代挂载 /etc/localtime，更安全地同步时区
+
+    # --- 安全加固配置 ---
+    # 1. 限制容器内的用户为非 root（确保 Dockerfile 中创建了 uid 为 10001 的用户）
+    user: "10001:10001"
+
+    # 2. 将容器根文件系统设为只读
+    read_only: true
+
+    # 3. 防止容器内进程通过 setuid/setgid 提升权限
+    security_opt:
+      - no-new-privileges:true
+
+    # 4. 裁剪所有的 Linux 内核能力（DERP 不需要任何特殊能力）
+    cap_drop:
+      - ALL
+
+    # 5. DERP 运行时可能会产生临时缓存（如证书或 stun 缓存），挂载一个只在内存中的 tmpfs
+    tmpfs:
+      - /tmp:uid=10001,gid=10001,mode=1777,nosuid,nodev,noexec,size=64m
+
+    # ---------- 资源限额 ----------
+    pids_limit: 256
+    mem_limit: 512m
+    memswap_limit: 512m               # 禁用 swap 扩张
+    cpus: "1.0"
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+
+networks:
+  derp-net:
+    driver: bridge
+    # 自定义 bridge，与宿主机其他容器网络隔离
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "false"   # 禁止同网络容器间任意互联（仅此一个服务时可关）
