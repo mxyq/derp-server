@@ -17,17 +17,15 @@ RUN apk add --no-cache git && \
 # ==========================================
 FROM alpine:latest
 
-# 核心安全加固：即使基础镜像在变，非 root 用户的权限屏障依然有效
-RUN addgroup -g 10001 -S derp && \
-    adduser -u 10001 -S derp -G derp
-
 # 从构建阶段复制最新的二进制文件
 COPY --from=builder /go/bin/derper /derper
 COPY entrypoint.sh /entrypoint.sh
 
 # 严格限制文件权限，防止容器运行时被篡改
-RUN chmod 555 /entrypoint.sh && \
-    chmod 555 /derper
+# 核心安全加固：即使基础镜像在变，非 root 用户的权限屏障依然有效
+RUN chmod 555 /entrypoint.sh /derper && \
+    addgroup -g 10001 -S derp && \
+    adduser -u 10001 -S derp -G derp
 
 # 切换到非 root 用户
 USER 10001
