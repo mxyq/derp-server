@@ -14,7 +14,9 @@ services:
       - "13478:3478/udp"
 
     environment:
-      - HOSTNAME=""
+      # HOSTNAME 是 DERP 服务器对外报告的地址，必须设置为你的服务器公网 IP 或域名（不带协议和端口）
+      # 不可以使用双引号, 否则写入 derper.conf 时造成格式错误
+      - HOSTNAME=
       - TZ=Asia/Shanghai  # 替代挂载 /etc/localtime，更安全地同步时区
 
     # --- 安全加固配置 ---
