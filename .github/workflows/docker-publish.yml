@@ -11,7 +11,7 @@ on:
       - "docker-compose.yml"
   # 每周一凌晨 2 点定时构建，保持 derper 版本最新（因为用的是 @main）
   schedule:
-    - cron: "0 2 * * 1"
+    - cron: "0 2 * * "
   # 支持手动触发
   workflow_dispatch:
 
